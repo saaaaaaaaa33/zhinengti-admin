@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体配置 - DCMS后台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; }
+        .sidebar { width: 220px; background: #191c24; color: #fff; position: fixed; left: 0; top: 0; bottom: 0; overflow-y: auto; z-index: 100; }
+        .sidebar .logo { padding: 20px; font-size: 16px; font-weight: bold; background: #2d3436; border-bottom: 1px solid #333; }
+        .sidebar .menu-item { padding: 12px 20px; cursor: pointer; transition: background .3s; display: flex; align-items: center; gap: 10px; }
+        .sidebar .menu-item:hover { background: #2d3436; }
+        .sidebar .menu-item.active { background: #007bff; }
+        .main-content { margin-left: 220px; min-height: 100vh; }
+        .header { padding: 16px 24px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .btn { padding: 6px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all .3s; }
+        .btn-primary { background: #007bff; color: #fff; }
+        .btn-secondary { background: #f0f0f0; color: #333; border: 1px solid #ddd; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .content-area { padding: 20px 24px; }
+        .tabs { display: flex; gap: 0; border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; }
+        .tab-item { padding: 10px 24px; cursor: pointer; font-size: 14px; color: #666; background: #fff; border: 1px solid #e0e0e0; border-bottom: none; margin-right: 8px; border-radius: 4px 4px 0 0; }
+        .tab-item:hover { background: #f8f9fa; }
+        .tab-item.active { color: #007bff; font-weight: 500; border-color: #007bff; }
+        .config-card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .config-card .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; }
+        .config-card .card-header h2 { font-size: 15px; font-weight: 600; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #007bff; }
+        .upload-area { border: 2px dashed #d9d9d9; border-radius: 6px; padding: 20px; text-align: center; cursor: pointer; }
+        .upload-area:hover { border-color: #007bff; background: #f8f9ff; }
+        .upload-area img, .upload-area video { max-width: 180px; max-height: 180px; border-radius: 6px; margin-bottom: 8px; }
+        .upload-area .upload-text { color: #999; font-size: 13px; }
+        .upload-area.has-image { border-style: solid; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .table th, .table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .table th { background: #fafafa; font-weight: 600; }
+        .table tr:hover { background: #f8f9ff; }
+        .table .action-btns { display: flex; gap: 6px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: #fff; border-radius: 8px; width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto; }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 16px; font-weight: 600; }
+        .modal-header .close { cursor: pointer; font-size: 20px; color: #999; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 10px; }
+        .sub-tabs { display: flex; gap: 16px; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .sub-tab-item { padding: 6px 0; cursor: pointer; font-size: 14px; color: #666; position: relative; }
+        .sub-tab-item.active { color: #007bff; font-weight: 500; }
+        .sub-tab-item.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: #007bff; }
+        .config-section { display: none; }
+        .config-section.active { display: block; }
+        .toast { position: fixed; bottom: 30px; right: 30px; padding: 12px 24px; border-radius: 4px; display: none; z-index: 2000; font-size: 14px; }
+        .toast-success { background: #28a745; color: #fff; }
+        .toast-error { background: #dc3545; color: #fff; }
+        .toast.show { display: block; animation: fadeIn .3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .responsive-img { max-width: 80px; max-height: 80px; border-radius: 4px; }
+        .toggle-switch { position: relative; width: 48px; height: 24px; cursor: pointer; }
+        .toggle-switch input { display: none; }
+        .toggle-slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 24px; transition: .3s; }
+        .toggle-slider:before { position: absolute; content: ''; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
+        .toggle-switch input:checked + .toggle-slider { background: #007bff; }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(24px); }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 16px; }
+        .checkbox-group label { display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer; }
+        .image-preview-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .image-preview-item { position: relative; width: 80px; height: 80px; }
+        .image-preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+        .image-preview-item .remove-btn { position: absolute; top: -4px; right: -4px; width: 20px; height: 20px; background: #dc3545; color: #fff; border-radius: 50%; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .dragging { opacity: 0.5; }
+        .sort-input { width: 50px; text-align: center; padding: 4px; border: 1px solid #ddd; border-radius: 3px; }
+        .search-results { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; margin-top: 8px; }
+        .search-result-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .search-result-item:hover { background: #f8f9ff; }
+        .search-result-item:last-child { border-bottom: none; }
+        .filter-bar { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">DCMS后台</div>
+        <div class="menu-item active">⚙️ 智能体配置</div>
+    </div>
+    <div class="main-content">
+        <div class="header">
+            <h1>智能体配置</h1>
+            <div>
+                <button class="btn btn-primary" onclick="saveAllConfig()">保存配置</button>
+                <button class="btn btn-secondary" onclick="resetConfig()">重置</button>
+            </div>
+        </div>
+        <div class="content-area">
+            <div class="tabs">
+                <div class="tab-item active" id="tab-coldStart" onclick="switchMainTab('coldStart')">冷启动页配置</div>
+                <div class="tab-item" id="tab-creative" onclick="switchMainTab('creative')">创作辅助配置</div>
+                <div class="tab-item" id="tab-newUser" onclick="switchMainTab('newUser')">新用户意图配置</div>
+            </div>
+
+            <div id="coldStart-tab" class="tab-content active">
+                <div class="sub-tabs">
+                    <div class="sub-tab-item active" onclick="switchSubTab('coldStart', 'intro')">自我介绍</div>
+                    <div class="sub-tab-item" onclick="switchSubTab('coldStart', 'playCard')">玩法卡片</div>
+                    <div class="sub-tab-item" onclick="switchSubTab('coldStart', 'recommend')">推荐词条</div>
+                </div>
+
+                <div id="coldStart-intro" class="config-section active">
+                    <div class="config-card">
+                        <div class="card-header"><h2>头像配置</h2></div>
+                        <div class="form-group">
+                            <label>头像GIF图（支持上传/替换GIF）</label>
+                            <div class="upload-area" onclick="triggerUpload('avatar-upload')" id="avatar-preview-area">
+                                <img id="avatar-preview" src="" style="display:none;">
+                                <div class="upload-text">点击上传头像</div>
+                            </div>
+                            <input type="file" id="avatar-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(this, 'avatar-preview', 'avatar-preview-area')">
+                        </div>
+                    </div>
+                    <div class="config-card">
+                        <div class="card-header"><h2>介绍台词配置</h2></div>
+                        <div class="form-group">
+                            <label>介绍台词文案（支持多行）</label>
+                            <textarea id="intro-text" rows="4" placeholder="请输入介绍台词"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="coldStart-playCard" class="config-section">
+                    <div class="config-card">
+                        <div class="card-header">
+                            <h2>玩法卡片列表</h2>
+                            <button class="btn btn-primary btn-sm" onclick="openPlayCardModal()">添加卡片</button>
+                        </div>
+                        <table class="table">
+                            <thead><tr><th>拖拽排序</th><th>序号</th><th>介绍文案</th><th>按钮文案</th><th>响应类型</th><th>介绍图片</th><th>是否展示</th><th>操作</th></tr></thead>
+                            <tbody id="playcard-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="coldStart-recommend" class="config-section">
+                    <div class="config-card">
+                        <div class="card-header">
+                            <h2>推荐词条列表</h2>
+                            <button class="btn btn-primary btn-sm" onclick="openRecommendModal()">添加词条</button>
+                        </div>
+                        <table class="table">
+                            <thead><tr><th>拖拽排序</th><th>排序</th><th>词条文案</th><th>默认提示词</th><th>参考图</th><th>关联意图</th><th>是否展示</th><th>操作</th></tr></thead>
+                            <tbody id="recommend-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="creative-tab" class="tab-content">
+                <div class="sub-tabs">
+                    <div class="sub-tab-item active" onclick="switchSubTab('creative', 'shortcut')">快捷入口</div>
+                    <div class="sub-tab-item" onclick="switchSubTab('creative', 'assist')">辅助词条</div>
+                    <div class="sub-tab-item" onclick="switchSubTab('creative', 'recipe')">创作配方</div>
+                </div>
+
+                <div id="creative-shortcut" class="config-section active">
+                    <div class="config-card">
+                        <div class="card-header">
+                            <h2>快捷入口列表</h2>
+                            <button class="btn btn-primary btn-sm" onclick="openShortcutModal()">添加入口</button>
+                        </div>
+                        <table class="table">
+                            <thead><tr><th>拖拽排序</th><th>排序</th><th>名称</th><th>默认提示文案</th><th>行为类型</th><th>适用端</th><th>是否展示</th><th>操作</th></tr></thead>
+                            <tbody id="shortcut-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="creative-assist" class="config-section">
+                    <div class="config-card">
+                        <div class="card-header">
+                            <h2>辅助词条列表</h2>
+                            <button class="btn btn-primary btn-sm" onclick="openAssistModal()">添加词条</button>
+                        </div>
+                        <table class="table">
+                            <thead><tr><th>拖拽排序</th><th>排序</th><th>词条文案</th><th>填入提示词</th><th>参考图</th><th>关联快捷入口</th><th>是否启用</th><th>操作</th></tr></thead>
+                            <tbody id="assist-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="creative-recipe" class="config-section">
+                    <div class="config-card">
+                        <div class="card-header">
+                            <h2>创作配方类型</h2>
+                            <button class="btn btn-primary btn-sm" onclick="openRecipeTypeModal()">添加类型</button>
+                        </div>
+                        <table class="table">
+                            <thead><tr><th>拖拽排序</th><th>排序</th><th>类型名称</th><th>适用快捷入口</th><th>是否启用</th><th>操作</th></tr></thead>
+                            <tbody id="recipe-type-list"></tbody>
+                        </table>
+                    </div>
+                    <div class="config-card">
+                        <div class="card-header">
+                            <h2>具体配方</h2>
+                            <button class="btn btn-primary btn-sm" onclick="openRecipeModal()">添加配方</button>
+                        </div>
+                        <div class="filter-bar">
+                            <label>筛选类型：</label>
+                            <select id="recipe-filter-type" onchange="renderRecipeList()">
+                                <option value="all">全部</option>
+                            </select>
+                        </div>
+                        <table class="table">
+                            <thead><tr><th>拖拽排序</th><th>排序</th><th>配方名称</th><th>所属类型</th><th>关联提示词</th><th>是否启用</th><th>操作</th></tr></thead>
+                            <tbody id="recipe-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="newUser-tab" class="tab-content">
+                <div class="sub-tabs">
+                    <div class="sub-tab-item active" onclick="switchSubTab('newUser', 'wallpaper')">壁纸屏保</div>
+                    <div class="sub-tab-item" onclick="switchSubTab('newUser', 'callAvatar')">通话头像</div>
+                </div>
+
+                <div id="newUser-wallpaper" class="config-section active">
+                    <div class="config-card">
+                        <div class="card-header"><h2>壁纸屏保配置</h2></div>
+                        <div class="form-group">
+                            <label>引导标题文案</label>
+                            <input type="text" id="wallpaper-title" placeholder="您可以点击图片/视频下载到手机，通过以下方式设为屏保/壁纸">
+                        </div>
+                        <div class="form-group">
+                            <label>安卓手机设置文案（富文本）</label>
+                            <textarea id="wallpaper-android" rows="4" placeholder="安卓手机设置指引"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>苹果手机设置文案（富文本）</label>
+                            <textarea id="wallpaper-ios" rows="4" placeholder="苹果手机设置指引"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>设置成功文案</label>
+                            <input type="text" id="wallpaper-success" placeholder="设置成功提示文案">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="newUser-callAvatar" class="config-section">
+                    <div class="config-card">
+                        <div class="card-header">
+                            <h2>通话头像模板</h2>
+                            <button class="btn btn-primary btn-sm" onclick="openCallAvatarModal()">添加模板</button>
+                        </div>
+                        <table class="table">
+                            <thead><tr><th>拖拽排序</th><th>排序</th><th>模板名称</th><th>模板ID</th><th>预览图</th><th>Demo视频</th><th>操作</th></tr></thead>
+                            <tbody id="call-avatar-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">添加配置</h3>
+                <div class="close" onclick="closeModal()">×</div>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveModalData()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast toast-success" id="toast">配置已保存</div>
+    <div class="toast toast-error" id="error-toast">保存失败</div>
+
+    <script>
+        var mockWorks = [
+            { id: 'work-001', name: '梦幻星空视频', templateId: 'tpl-1001' },
+            { id: 'work-002', name: '卡通猫咪动画', templateId: 'tpl-1002' },
+            { id: 'work-003', name: '风景延时摄影', templateId: 'tpl-1003' },
+            { id: 'work-004', name: '舞蹈短视频', templateId: 'tpl-1004' },
+            { id: 'work-005', name: '美食制作教程', templateId: 'tpl-1005' },
+            { id: 'work-006', name: '旅行Vlog模板', templateId: 'tpl-1006' },
+            { id: 'work-007', name: '生日祝福视频', templateId: 'tpl-1007' },
+            { id: 'work-008', name: '搞笑动画', templateId: 'tpl-1008' }
+        ];
+
+        var defaultConfig = {
+            coldStart: {
+                intro: { avatar: '', text: '我是兔小爱，我可以帮你改图、写歌、做视频，还能设彩铃' },
+                playCards: [
+                    { id: 1, sort: 1, title: '图片美化', image: '', buttonText: '立即体验', responseType: 'input', templateId: '', defaultPrompt: '美化这张图片', defaultImage: '', link: '', show: true },
+                    { id: 2, sort: 2, title: '视频创作', image: '', buttonText: '做同款', responseType: 'sameStyle', templateId: 'tpl-1001', defaultPrompt: '', defaultImage: '', link: '', show: true },
+                    { id: 3, sort: 3, title: '参与活动', image: '', buttonText: '去参与', responseType: 'activity', templateId: '', defaultPrompt: '', defaultImage: '', link: 'https://example.com', show: true }
+                ],
+                recommend: [
+                    { id: 1, text: '可爱猫咪', sort: 1, prompt: '可爱的卡通猫咪头像', referenceImage: '', intent: 'image', show: true },
+                    { id: 2, text: '梦幻星空', sort: 2, prompt: '梦幻紫色星空背景', referenceImage: '', intent: 'image', show: true },
+                    { id: 3, text: '夏日海滩', sort: 3, prompt: '阳光沙滩海浪风景', referenceImage: '', intent: 'video', show: true },
+                    { id: 4, text: '赛博朋克', sort: 4, prompt: '赛博朋克风格城市夜景', referenceImage: '', intent: 'video', show: true },
+                    { id: 5, text: '古风美人', sort: 5, prompt: '中国古风美女插画', referenceImage: '', intent: 'image', show: true },
+                    { id: 6, text: '写一首歌', sort: 6, prompt: '创作一首抒情歌曲', referenceImage: '', intent: 'music', show: true }
+                ]
+            },
+            creative: {
+                shortcuts: [
+                    { id: 1, name: '修改图片', sort: 1, defaultText: '选择图片，可输入美化、消除、换背景等想法', actionType: 'input', link: '', show: true, platforms: ['APP', '小程序'] },
+                    { id: 2, name: '图片动起来', sort: 2, defaultText: '选择图片，可让它动起来变成5秒视频', actionType: 'input', link: '', show: true, platforms: ['APP', 'H5'] },
+                    { id: 3, name: 'AI做视频', sort: 3, defaultText: '输入灵感，创作你想要的短视频', actionType: 'input', link: '', show: true, platforms: ['APP', '小程序', 'H5'] },
+                    { id: 4, name: '个性化壁纸', sort: 4, defaultText: '', actionType: 'page', link: '/wallpaper', show: true, platforms: ['APP'] },
+                    { id: 5, name: '写一首歌', sort: 5, defaultText: '输入灵感，写一首表达自己的歌', actionType: 'input', link: '', show: true, platforms: ['APP', '小程序'] }
+                ],
+                assist: [
+                    { id: 1, text: '美化图片', sort: 1, prompt: '美化图片，调整亮度对比度', referenceImages: [], shortcut: 'modifyImage', enable: true },
+                    { id: 2, text: '消除杂物', sort: 2, prompt: '消除图片中的杂物和水印', referenceImages: [], shortcut: 'modifyImage', enable: true },
+                    { id: 3, text: '换背景', sort: 3, prompt: '更换图片背景', referenceImages: [], shortcut: 'modifyImage', enable: true },
+                    { id: 4, text: '动态照片', sort: 1, prompt: '让静态图片变成动态效果', referenceImages: [], shortcut: 'animateImage', enable: true },
+                    { id: 5, text: '旅行vlog', sort: 1, prompt: '创作旅行vlog视频', referenceImages: [], shortcut: 'aiVideo', enable: true },
+                    { id: 6, text: '简约风格', sort: 1, prompt: '简约风格手机壁纸', referenceImages: [], shortcut: 'wallpaper', enable: true },
+                    { id: 7, text: '抒情歌曲', sort: 1, prompt: '创作抒情风格歌曲', referenceImages: [], shortcut: 'writeSong', enable: true }
+                ],
+                recipeTypes: [
+                    { id: 1, name: '镜头', sort: 1, shortcuts: ['aiVideo'], enable: true },
+                    { id: 2, name: '景别', sort: 2, shortcuts: ['aiVideo', 'modifyImage'], enable: true },
+                    { id: 3, name: '风格', sort: 3, shortcuts: ['modifyImage', 'aiVideo', 'writeSong'], enable: true }
+                ],
+                recipes: [
+                    { id: 1, name: '推镜', typeId: 1, sort: 1, prompt: '推进镜头效果', enable: true },
+                    { id: 2, name: '拉镜', typeId: 1, sort: 2, prompt: '拉远镜头效果', enable: true },
+                    { id: 3, name: '全景', typeId: 2, sort: 1, prompt: '全景展示', enable: true },
+                    { id: 4, name: '中景', typeId: 2, sort: 2, prompt: '中景展示', enable: true },
+                    { id: 5, name: '水墨画', typeId: 3, sort: 1, prompt: '水墨画风格', enable: true },
+                    { id: 6, name: '动漫风格', typeId: 3, sort: 2, prompt: '动漫风格', enable: true },
+                    { id: 7, name: '写实风格', typeId: 3, sort: 3, prompt: '写实风格', enable: true }
+                ]
+            },
+            newUser: {
+                wallpaper: {
+                    title: '您可以点击图片/视频下载到手机，通过以下方式设为屏保/壁纸',
+                    androidText: '1. 长按图片保存到相册\n2. 进入设置 > 显示 > 壁纸\n3. 选择刚才保存的图片',
+                    iosText: '1. 长按图片保存到相册\n2. 进入设置 > 墙纸\n3. 选择刚才保存的图片',
+                    successText: '设置成功！'
+                },
+                callAvatar: [
+                    { id: 1, name: '可爱猫咪', templateId: 'cat-001', sort: 1, previewImage: '', demoVideo: '' },
+                    { id: 2, name: '梦幻星空', templateId: 'star-001', sort: 2, previewImage: '', demoVideo: '' }
+                ]
+            }
+        };
+
+        var storedConfig = localStorage.getItem('dcmsConfig');
+        var config;
+        if (storedConfig) {
+            try {
+                var parsed = JSON.parse(storedConfig);
+                if (parsed.coldStart && parsed.coldStart.playCards && parsed.creative && parsed.creative.shortcuts && parsed.newUser && parsed.newUser.callAvatar) {
+                    config = parsed;
+                    if (config.coldStart.playCards) config.coldStart.playCards.forEach(function(i) { if (i.show === undefined) i.show = true; });
+                    if (config.coldStart.recommend) config.coldStart.recommend.forEach(function(i) { if (i.show === undefined) i.show = true; });
+                    if (config.creative.shortcuts) config.creative.shortcuts.forEach(function(i) { if (i.show === undefined) i.show = true; });
+                    if (config.creative.assist) config.creative.assist.forEach(function(i) { if (i.enable === undefined) i.enable = true; });
+                    if (config.creative.recipeTypes) config.creative.recipeTypes.forEach(function(i) { if (i.enable === undefined) i.enable = true; });
+                    if (config.creative.recipes) config.creative.recipes.forEach(function(i) { if (i.enable === undefined) i.enable = true; });
+                } else {
+                    config = JSON.parse(JSON.stringify(defaultConfig));
+                    localStorage.removeItem('dcmsConfig');
+                }
+            } catch (e) {
+                config = JSON.parse(JSON.stringify(defaultConfig));
+                localStorage.removeItem('dcmsConfig');
+            }
+        } else {
+            config = JSON.parse(JSON.stringify(defaultConfig));
+        }
+        var modalType = '';
+        var editingId = null;
+        var draggedItem = null;
+
+        function init() {
+            loadConfig();
+            renderPlayCardList();
+            renderRecommendList();
+            renderShortcutList();
+            renderAssistList();
+            renderRecipeTypeList();
+            renderRecipeList();
+            renderCallAvatarList();
+        }
+
+        function switchMainTab(tab) {
+            document.querySelectorAll('.tabs .tab-item').forEach(function(el) { el.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.getElementById(tab + '-tab').classList.add('active');
+            if (tab === 'coldStart') switchSubTab('coldStart', 'intro');
+            else if (tab === 'creative') switchSubTab('creative', 'shortcut');
+            else if (tab === 'newUser') switchSubTab('newUser', 'wallpaper');
+        }
+
+        function switchSubTab(module, tab) {
+            document.querySelectorAll('#' + module + '-tab .sub-tab-item').forEach(function(el) { el.classList.remove('active'); });
+            document.querySelectorAll('#' + module + '-tab .config-section').forEach(function(el) { el.classList.remove('active'); });
+            var subTabItems = document.querySelectorAll('#' + module + '-tab .sub-tab-item');
+            var tabNames = module === 'coldStart' ? ['intro', 'playCard', 'recommend'] : module === 'creative' ? ['shortcut', 'assist', 'recipe'] : ['wallpaper', 'callAvatar'];
+            subTabItems.forEach(function(item, index) {
+                if (tabNames[index] === tab) item.classList.add('active');
+            });
+            document.getElementById(module + '-' + tab).classList.add('active');
+        }
+
+        function loadConfig() {
+            var intro = config.coldStart.intro;
+            document.getElementById('intro-text').value = intro.text;
+            if (intro.avatar) {
+                document.getElementById('avatar-preview').src = intro.avatar;
+                document.getElementById('avatar-preview').style.display = 'block';
+                document.getElementById('avatar-preview-area').classList.add('has-image');
+            }
+            var wp = config.newUser.wallpaper;
+            document.getElementById('wallpaper-title').value = wp.title;
+            document.getElementById('wallpaper-android').value = wp.androidText;
+            document.getElementById('wallpaper-ios').value = wp.iosText;
+            document.getElementById('wallpaper-success').value = wp.successText;
+        }
+
+        function triggerUpload(id) { document.getElementById(id).click(); }
+
+        function handleImageUpload(input, previewId, areaId) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById(previewId).src = e.target.result;
+                    document.getElementById(previewId).style.display = 'block';
+                    document.getElementById(areaId).classList.add('has-image');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function handleVideoUpload(input, previewId, areaId) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var video = document.getElementById(previewId);
+                    video.src = e.target.result;
+                    video.style.display = 'block';
+                    document.getElementById(areaId).classList.add('has-image');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function saveAllConfig() {
+            config.coldStart.intro.text = document.getElementById('intro-text').value;
+            var avatarPreview = document.getElementById('avatar-preview');
+            if (avatarPreview.src && avatarPreview.src !== 'about:blank' && avatarPreview.style.display !== 'none') {
+                config.coldStart.intro.avatar = avatarPreview.src;
+            }
+            config.newUser.wallpaper.title = document.getElementById('wallpaper-title').value;
+            config.newUser.wallpaper.androidText = document.getElementById('wallpaper-android').value;
+            config.newUser.wallpaper.iosText = document.getElementById('wallpaper-ios').value;
+            config.newUser.wallpaper.successText = document.getElementById('wallpaper-success').value;
+            localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            showToast();
+        }
+
+        function resetConfig() {
+            if (confirm('确定要重置所有配置吗？')) {
+                config = JSON.parse(JSON.stringify(defaultConfig));
+                localStorage.removeItem('dcmsConfig');
+                init();
+                showToast('配置已重置');
+            }
+        }
+
+        function showToast(msg) {
+            msg = msg || '配置已保存';
+            var toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(function() { toast.classList.remove('show'); }, 2000);
+        }
+
+        function showErrorToast(msg) {
+            msg = msg || '保存失败';
+            var toast = document.getElementById('error-toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(function() { toast.classList.remove('show'); }, 2000);
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('show');
+            editingId = null;
+            modalType = '';
+        }
+
+        function getResponseTypeName(type) {
+            var names = { input: '输入框直接制作', sameStyle: '做同款', activity: '参与活动' };
+            return names[type] || type;
+        }
+
+        function getIntentName(intent) {
+            var names = { image: '文生图', video: '文生视频', image2image: '图生图', video2video: '图生视频', music: '文生音乐', imageMusic: '图生音乐' };
+            return names[intent] || intent;
+        }
+
+        function getShortcutName(key) {
+            var names = { modifyImage: '修改图片', animateImage: '图片动起来', aiVideo: 'AI做视频', wallpaper: '个性化壁纸', writeSong: '写一首歌' };
+            return names[key] || key;
+        }
+
+        function searchWorks() {
+            var keyword = document.getElementById('work-search').value.trim();
+            var resultsDiv = document.getElementById('work-search-results');
+            if (!keyword) { resultsDiv.innerHTML = ''; return; }
+            var results = mockWorks.filter(function(w) {
+                return w.id.toLowerCase().includes(keyword.toLowerCase()) || w.name.toLowerCase().includes(keyword.toLowerCase());
+            });
+            var html = '';
+            results.forEach(function(w) {
+                html += '<div class="search-result-item" onclick="selectWork(\'' + w.templateId + '\', \'' + w.name + '\')">' + w.id + ' - ' + w.name + '</div>';
+            });
+            resultsDiv.innerHTML = html || '<div class="search-result-item">未找到匹配作品</div>';
+        }
+
+        function selectWork(templateId, name) {
+            document.getElementById('pc-template').value = templateId;
+            document.getElementById('work-search').value = name;
+            document.getElementById('work-search-results').innerHTML = '';
+        }
+
+        function dragStart(e, id, listType) {
+            draggedItem = { id: id, listType: listType };
+            e.target.classList.add('dragging');
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+        }
+
+        function drop(e, targetId, listType) {
+            e.preventDefault();
+            var items = null;
+            if (listType === 'playCard') items = config.coldStart.playCards;
+            else if (listType === 'recommend') items = config.coldStart.recommend;
+            else if (listType === 'shortcut') items = config.creative.shortcuts;
+            else if (listType === 'assist') items = config.creative.assist;
+            else if (listType === 'recipeType') items = config.creative.recipeTypes;
+            else if (listType === 'recipe') items = config.creative.recipes;
+            else if (listType === 'callAvatar') items = config.newUser.callAvatar;
+            if (!items || !draggedItem) return;
+            var draggedIndex = items.findIndex(function(i) { return i.id === draggedItem.id; });
+            var targetIndex = items.findIndex(function(i) { return i.id === targetId; });
+            if (draggedIndex !== targetIndex) {
+                var draggedItemData = items.splice(draggedIndex, 1)[0];
+                items.splice(targetIndex, 0, draggedItemData);
+                items.forEach(function(item, index) { item.sort = index + 1; });
+                localStorage.setItem('dcmsConfig', JSON.stringify(config));
+                showToast('排序已更新');
+            }
+            document.querySelectorAll('.dragging').forEach(function(el) { el.classList.remove('dragging'); });
+            draggedItem = null;
+            if (listType === 'playCard') renderPlayCardList();
+            else if (listType === 'recommend') renderRecommendList();
+            else if (listType === 'shortcut') renderShortcutList();
+            else if (listType === 'assist') renderAssistList();
+            else if (listType === 'recipeType') renderRecipeTypeList();
+            else if (listType === 'recipe') renderRecipeList();
+            else if (listType === 'callAvatar') renderCallAvatarList();
+        }
+
+        function updateSort(listType, id, newSort) {
+            var items = null;
+            if (listType === 'playCard') items = config.coldStart.playCards;
+            else if (listType === 'recommend') items = config.coldStart.recommend;
+            else if (listType === 'shortcut') items = config.creative.shortcuts;
+            else if (listType === 'assist') items = config.creative.assist;
+            else if (listType === 'recipeType') items = config.creative.recipeTypes;
+            else if (listType === 'recipe') items = config.creative.recipes;
+            else if (listType === 'callAvatar') items = config.newUser.callAvatar;
+            if (!items) return;
+            var item = items.find(function(i) { return i.id === id; });
+            if (item) {
+                item.sort = parseInt(newSort) || 1;
+                items.sort(function(a, b) { return a.sort - b.sort; });
+                items.forEach(function(i, idx) { i.sort = idx + 1; });
+                localStorage.setItem('dcmsConfig', JSON.stringify(config));
+                showToast('排序已更新');
+                if (listType === 'playCard') renderPlayCardList();
+                else if (listType === 'recommend') renderRecommendList();
+                else if (listType === 'shortcut') renderShortcutList();
+                else if (listType === 'assist') renderAssistList();
+                else if (listType === 'recipeType') renderRecipeTypeList();
+                else if (listType === 'recipe') renderRecipeList();
+                else if (listType === 'callAvatar') renderCallAvatarList();
+            }
+        }
+
+        // PlayCard
+        function renderPlayCardList() {
+            var list = document.getElementById('playcard-list');
+            var items = config.coldStart.playCards.sort(function(a, b) { return a.sort - b.sort; });
+            var html = '';
+            items.forEach(function(item) {
+                html += '<tr draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'playCard\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'playCard\')">';
+                html += '<td>☰</td>';
+                html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'playCard\', ' + item.id + ', this.value)"></td>';
+                html += '<td>' + item.title + '</td><td>' + item.buttonText + '</td><td>' + getResponseTypeName(item.responseType) + '</td>';
+                html += '<td>' + (item.image ? '<img src="' + item.image + '" class="responsive-img">' : '-') + '</td>';
+                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.show ? ' checked' : '') + ' onchange="togglePlayCardShow(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openPlayCardModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deletePlayCard(' + item.id + ')">删除</button></td></tr>';
+            });
+            list.innerHTML = html;
+        }
+
+        function togglePlayCardShow(id, show) {
+            var item = config.coldStart.playCards.find(function(i) { return i.id === id; });
+            var activeCount = config.coldStart.playCards.filter(function(i) { return i.show; }).length;
+            if (!show && activeCount <= 3) { showErrorToast('不足3个玩法不支持下线'); item.show = true; renderPlayCardList(); return; }
+            item.show = show;
+            localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            showToast(show ? '已上线' : '已下线');
+        }
+
+        function openPlayCardModal(id) {
+            editingId = id || null;
+            modalType = 'playCard';
+            var item = id ? config.coldStart.playCards.find(function(i) { return i.id === id; }) : null;
+            document.getElementById('modal-title').innerText = id ? '编辑玩法卡片' : '添加玩法卡片';
+            var imgDisplay = item && item.image ? 'display:block;' : 'display:none;';
+            var defImgDisplay = item && item.defaultImage ? 'display:block;' : 'display:none;';
+            var showChecked = item ? (item.show ? 'checked' : '') : 'checked';
+            document.getElementById('modal-body').innerHTML =
+                '<div class="form-group"><label>玩法卡片序号</label><input type="number" id="pc-sort" value="' + (item ? item.sort : config.coldStart.playCards.length + 1) + '" min="1"></div>' +
+                '<div class="form-group"><label>介绍文案</label><textarea id="pc-title" required>' + (item ? item.title : '') + '</textarea></div>' +
+                '<div class="form-group"><label>介绍图片（建议尺寸468*546）</label><div class="upload-area" onclick="triggerUpload(\'pc-image-upload\')" id="pc-image-area">' +
+                '<img id="pc-image-preview" src="' + (item ? item.image : '') + '" style="' + imgDisplay + '"><div class="upload-text">点击上传图片</div></div>' +
+                '<input type="file" id="pc-image-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(this, \'pc-image-preview\', \'pc-image-area\')"></div>' +
+                '<div class="form-group"><label>按钮文案</label><input type="text" id="pc-button" required value="' + (item ? item.buttonText : '') + '"></div>' +
+                '<div class="form-group"><label>响应类型</label><select id="pc-response" onchange="changePlayCardResponse()">' +
+                '<option value="input"' + (item && item.responseType === 'input' ? ' selected' : '') + '>输入框直接制作</option>' +
+                '<option value="sameStyle"' + (item && item.responseType === 'sameStyle' ? ' selected' : '') + '>做同款</option>' +
+                '<option value="activity"' + (item && item.responseType === 'activity' ? ' selected' : '') + '>参与活动</option></select></div>' +
+                '<div id="pc-sameStyle" class="form-group"' + (item && item.responseType === 'sameStyle' ? '' : ' style="display:none;"') + '><label>制作ID（输入制作ID或作品名称搜索）</label>' +
+                '<div style="display:flex; gap:8px;"><input type="text" id="pc-template" value="' + (item ? item.templateId : '') + '" placeholder="输入制作ID或作品名称">' +
+                '<button class="btn btn-primary btn-sm" onclick="searchWorks()">搜索</button></div>' +
+                '<div id="work-search-results" class="search-results"></div></div>' +
+                '<div id="pc-input" class="form-group"' + (item && item.responseType === 'input' ? '' : ' style="display:none;"') + '><label>默认提示词</label><input type="text" id="pc-prompt" value="' + (item ? item.defaultPrompt : '') + '"><label style="margin-top:12px;">默认参考图</label>' +
+                '<div class="upload-area" onclick="triggerUpload(\'pc-defimg-upload\')" id="pc-defimg-area"><img id="pc-defimg-preview" src="' + (item ? item.defaultImage : '') + '" style="' + defImgDisplay + '"><div class="upload-text">点击上传参考图</div></div>' +
+                '<input type="file" id="pc-defimg-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(this, \'pc-defimg-preview\', \'pc-defimg-area\')"></div>' +
+                '<div id="pc-activity" class="form-group"' + (item && item.responseType === 'activity' ? '' : ' style="display:none;"') + '><label>跳转链接</label><input type="url" id="pc-link" value="' + (item ? item.link : '') + '"></div>' +
+                '<div class="form-group"><label>是否展示</label><label class="toggle-switch"><input type="checkbox" id="pc-show" ' + showChecked + '><span class="toggle-slider"></span></label></div>';
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function changePlayCardResponse() {
+            var type = document.getElementById('pc-response').value;
+            document.getElementById('pc-sameStyle').style.display = type === 'sameStyle' ? 'block' : 'none';
+            document.getElementById('pc-input').style.display = type === 'input' ? 'block' : 'none';
+            document.getElementById('pc-activity').style.display = type === 'activity' ? 'block' : 'none';
+        }
+
+        function deletePlayCard(id) {
+            var activeCount = config.coldStart.playCards.filter(function(i) { return i.show; }).length;
+            var item = config.coldStart.playCards.find(function(i) { return i.id === id; });
+            if (item.show && activeCount <= 3) { showErrorToast('不足3个玩法不支持删除'); return; }
+            if (confirm('确定要删除该卡片吗？')) {
+                config.coldStart.playCards = config.coldStart.playCards.filter(function(i) { return i.id !== id; });
+                renderPlayCardList();
+                showToast('卡片已删除');
+                localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            }
+        }
+
+        // Recommend
+        function renderRecommendList() {
+            var list = document.getElementById('recommend-list');
+            var items = config.coldStart.recommend.sort(function(a, b) { return a.sort - b.sort; });
+            var html = '';
+            items.forEach(function(item) {
+                html += '<tr draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'recommend\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'recommend\')">';
+                html += '<td>☰</td>';
+                html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'recommend\', ' + item.id + ', this.value)"></td>';
+                html += '<td>' + item.text + '</td><td>' + item.prompt + '</td>';
+                html += '<td>' + (item.referenceImage ? '<img src="' + item.referenceImage + '" class="responsive-img">' : '-') + '</td>';
+                html += '<td>' + getIntentName(item.intent) + '</td>';
+                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.show ? ' checked' : '') + ' onchange="toggleRecommendShow(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openRecommendModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteRecommend(' + item.id + ')">删除</button></td></tr>';
+            });
+            list.innerHTML = html;
+        }
+
+        function toggleRecommendShow(id, show) {
+            var item = config.coldStart.recommend.find(function(i) { return i.id === id; });
+            item.show = show;
+            localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            showToast(show ? '已上线' : '已下线');
+        }
+
+        function openRecommendModal(id) {
+            editingId = id || null;
+            modalType = 'recommend';
+            var item = id ? config.coldStart.recommend.find(function(i) { return i.id === id; }) : null;
+            document.getElementById('modal-title').innerText = id ? '编辑推荐词条' : '添加推荐词条';
+            var imgDisplay = item && item.referenceImage ? 'display:block;' : 'display:none;';
+            var showChecked = item ? (item.show ? 'checked' : '') : 'checked';
+            document.getElementById('modal-body').innerHTML =
+                '<div class="form-group"><label>词条文案</label><input type="text" id="rec-text" required value="' + (item ? item.text : '') + '"></div>' +
+                '<div class="form-group"><label>词条排序</label><input type="number" id="rec-sort" value="' + (item ? item.sort : config.coldStart.recommend.length + 1) + '" min="1"></div>' +
+                '<div class="form-group"><label>默认提示词</label><input type="text" id="rec-prompt" value="' + (item ? item.prompt : '') + '"></div>' +
+                '<div class="form-group"><label>默认参考图</label><div class="upload-area" onclick="triggerUpload(\'rec-img-upload\')" id="rec-img-area">' +
+                '<img id="rec-img-preview" src="' + (item ? item.referenceImage : '') + '" style="' + imgDisplay + '"><div class="upload-text">点击上传参考图</div></div>' +
+                '<input type="file" id="rec-img-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(this, \'rec-img-preview\', \'rec-img-area\')"></div>' +
+                '<div class="form-group"><label>关联意图</label><select id="rec-intent">' +
+                '<option value="image"' + (item && item.intent === 'image' ? ' selected' : '') + '>文生图</option>' +
+                '<option value="video"' + (item && item.intent === 'video' ? ' selected' : '') + '>文生视频</option>' +
+                '<option value="image2image"' + (item && item.intent === 'image2image' ? ' selected' : '') + '>图生图</option>' +
+                '<option value="video2video"' + (item && item.intent === 'video2video' ? ' selected' : '') + '>图生视频</option>' +
+                '<option value="music"' + (item && item.intent === 'music' ? ' selected' : '') + '>文生音乐</option>' +
+                '<option value="imageMusic"' + (item && item.intent === 'imageMusic' ? ' selected' : '') + '>图生音乐</option></select></div>' +
+                '<div class="form-group"><label>是否展示</label><label class="toggle-switch"><input type="checkbox" id="rec-show" ' + showChecked + '><span class="toggle-slider"></span></label></div>';
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function deleteRecommend(id) {
+            if (confirm('确定要删除该词条吗？')) {
+                config.coldStart.recommend = config.coldStart.recommend.filter(function(i) { return i.id !== id; });
+                renderRecommendList();
+                showToast('词条已删除');
+                localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            }
+        }
+
+        // Shortcut
+        function renderShortcutList() {
+            var list = document.getElementById('shortcut-list');
+            var items = config.creative.shortcuts.sort(function(a, b) { return a.sort - b.sort; });
+            var html = '';
+            items.forEach(function(item) {
+                html += '<tr draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'shortcut\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'shortcut\')">';
+                html += '<td>☰</td>';
+                html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'shortcut\', ' + item.id + ', this.value)"></td>';
+                html += '<td>' + item.name + '</td><td>' + item.defaultText + '</td>';
+                html += '<td>' + (item.actionType === 'input' ? '拉起输入框' : '跳转页面') + '</td>';
+                html += '<td>' + item.platforms.join(', ') + '</td>';
+                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.show ? ' checked' : '') + ' onchange="toggleShortcutShow(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openShortcutModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteShortcut(' + item.id + ')">删除</button></td></tr>';
+            });
+            list.innerHTML = html;
+        }
+
+        function toggleShortcutShow(id, show) {
+            var item = config.creative.shortcuts.find(function(i) { return i.id === id; });
+            item.show = show;
+            localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            showToast(show ? '已上线' : '已下线');
+        }
+
+        function openShortcutModal(id) {
+            editingId = id || null;
+            modalType = 'shortcut';
+            var item = id ? config.creative.shortcuts.find(function(i) { return i.id === id; }) : null;
+            document.getElementById('modal-title').innerText = id ? '编辑快捷入口' : '添加快捷入口';
+            var appChecked = item && item.platforms.includes('APP') ? 'checked' : '';
+            var miniChecked = item && item.platforms.includes('小程序') ? 'checked' : '';
+            var h5Checked = item && item.platforms.includes('H5') ? 'checked' : '';
+            var showChecked = item ? (item.show ? 'checked' : '') : 'checked';
+            document.getElementById('modal-body').innerHTML =
+                '<div class="form-group"><label>快捷入口名称</label><input type="text" id="sc-name" required value="' + (item ? item.name : '') + '"></div>' +
+                '<div class="form-group"><label>快捷入口排序</label><input type="number" id="sc-sort" value="' + (item ? item.sort : config.creative.shortcuts.length + 1) + '" min="1"></div>' +
+                '<div class="form-group"><label>点击行为类型</label><select id="sc-action" onchange="changeShortcutAction()">' +
+                '<option value="input"' + (item && item.actionType === 'input' ? ' selected' : '') + '>拉起输入框</option>' +
+                '<option value="page"' + (item && item.actionType === 'page' ? ' selected' : '') + '>跳转页面</option></select></div>' +
+                '<div id="sc-default-group" class="form-group"' + (item && item.actionType === 'page' ? ' style="display:none;"' : '') + '><label>默认提示文案（拉起输入框时填入的默认文字）</label><textarea id="sc-default">' + (item ? item.defaultText : '') + '</textarea></div>' +
+                '<div id="sc-link-group" class="form-group"' + (item && item.actionType === 'page' ? '' : ' style="display:none;"') + '><label>跳转链接</label><input type="url" id="sc-link" value="' + (item ? item.link : '') + '"></div>' +
+                '<div class="form-group"><label>适用端</label><div class="checkbox-group">' +
+                '<label><input type="checkbox" id="sc-app" ' + appChecked + '> APP</label>' +
+                '<label><input type="checkbox" id="sc-mini" ' + miniChecked + '> 小程序</label>' +
+                '<label><input type="checkbox" id="sc-h5" ' + h5Checked + '> H5</label></div></div>' +
+                '<div class="form-group"><label>是否展示</label><label class="toggle-switch"><input type="checkbox" id="sc-show" ' + showChecked + '><span class="toggle-slider"></span></label></div>';
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function changeShortcutAction() {
+            var type = document.getElementById('sc-action').value;
+            document.getElementById('sc-default-group').style.display = type === 'input' ? 'block' : 'none';
+            document.getElementById('sc-link-group').style.display = type === 'page' ? 'block' : 'none';
+        }
+
+        function deleteShortcut(id) {
+            if (confirm('确定要删除该入口吗？')) {
+                config.creative.shortcuts = config.creative.shortcuts.filter(function(i) { return i.id !== id; });
+                renderShortcutList();
+                showToast('入口已删除');
+                localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            }
+        }
+
+        // Assist
+        function renderAssistList() {
+            var list = document.getElementById('assist-list');
+            var items = config.creative.assist.sort(function(a, b) { return a.sort - b.sort; });
+            var html = '';
+            items.forEach(function(item) {
+                html += '<tr draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'assist\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'assist\')">';
+                html += '<td>☰</td>';
+                html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'assist\', ' + item.id + ', this.value)"></td>';
+                html += '<td>' + item.text + '</td><td>' + item.prompt + '</td>';
+                var imgs = '';
+                if (item.referenceImages && item.referenceImages.length > 0) {
+                    item.referenceImages.forEach(function(img) { imgs += '<img src="' + img + '" class="responsive-img" style="margin-right:4px;">'; });
+                }
+                html += '<td>' + (imgs || '-') + '</td><td>' + getShortcutName(item.shortcut) + '</td>';
+                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.enable ? ' checked' : '') + ' onchange="toggleAssistEnable(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openAssistModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteAssist(' + item.id + ')">删除</button></td></tr>';
+            });
+            list.innerHTML = html;
+        }
+
+        function toggleAssistEnable(id, enable) {
+            var item = config.creative.assist.find(function(i) { return i.id === id; });
+            item.enable = enable;
+            localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            showToast(enable ? '已启用' : '已禁用');
+        }
+
+        function openAssistModal(id) {
+            editingId = id || null;
+            modalType = 'assist';
+            var item = id ? config.creative.assist.find(function(i) { return i.id === id; }) : null;
+            document.getElementById('modal-title').innerText = id ? '编辑辅助词条' : '添加辅助词条';
+            var imagesHtml = '';
+            if (item && item.referenceImages && item.referenceImages.length > 0) {
+                item.referenceImages.forEach(function(img) {
+                    imagesHtml += '<div class="image-preview-item"><img src="' + img + '"><div class="remove-btn" onclick="removeAssistImage(this)">×</div></div>';
+                });
+            }
+            var enableChecked = item ? (item.enable ? 'checked' : '') : 'checked';
+            document.getElementById('modal-body').innerHTML =
+                '<div class="form-group"><label>词条文案</label><input type="text" id="as-text" required value="' + (item ? item.text : '') + '"></div>' +
+                '<div class="form-group"><label>词条排序</label><input type="number" id="as-sort" value="' + (item ? item.sort : config.creative.assist.length + 1) + '" min="1"></div>' +
+                '<div class="form-group"><label>填入提示词</label><input type="text" id="as-prompt" value="' + (item ? item.prompt : '') + '"></div>' +
+                '<div class="form-group"><label>参考图（支持多张）</label><div class="image-preview-list" id="as-images-preview">' + imagesHtml + '</div>' +
+                '<div class="upload-area" onclick="triggerUpload(\'as-img-upload\')" id="as-img-area"><div class="upload-text">点击上传图片</div></div>' +
+                '<input type="file" id="as-img-upload" accept="image/*" multiple style="display:none;" onchange="handleAssistImageUpload(this)"></div>' +
+                '<div class="form-group"><label>关联的快捷入口</label><select id="as-shortcut">' +
+                '<option value="modifyImage"' + (item && item.shortcut === 'modifyImage' ? ' selected' : '') + '>修改图片</option>' +
+                '<option value="animateImage"' + (item && item.shortcut === 'animateImage' ? ' selected' : '') + '>图片动起来</option>' +
+                '<option value="aiVideo"' + (item && item.shortcut === 'aiVideo' ? ' selected' : '') + '>AI做视频</option>' +
+                '<option value="wallpaper"' + (item && item.shortcut === 'wallpaper' ? ' selected' : '') + '>个性化壁纸</option>' +
+                '<option value="writeSong"' + (item && item.shortcut === 'writeSong' ? ' selected' : '') + '>写一首歌</option></select></div>' +
+                '<div class="form-group"><label>是否启用</label><label class="toggle-switch"><input type="checkbox" id="as-enable" ' + enableChecked + '><span class="toggle-slider"></span></label></div>';
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function handleAssistImageUpload(input) {
+            var preview = document.getElementById('as-images-preview');
+            var files = input.files;
+            for (var i = 0; i < files.length; i++) {
+                var reader = new FileReader();
+                reader.onload = (function(file) {
+                    return function(e) {
+                        preview.innerHTML += '<div class="image-preview-item"><img src="' + e.target.result + '"><div class="remove-btn" onclick="removeAssistImage(this)">×</div></div>';
+                    };
+                })(files[i]);
+                reader.readAsDataURL(files[i]);
+            }
+            input.value = '';
+        }
+
+        function removeAssistImage(el) {
+            el.parentElement.remove();
+        }
+
+        function deleteAssist(id) {
+            if (confirm('确定要删除该词条吗？')) {
+                config.creative.assist = config.creative.assist.filter(function(i) { return i.id !== id; });
+                renderAssistList();
+                showToast('词条已删除');
+                localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            }
+        }
+
+        // RecipeType
+        function renderRecipeTypeList() {
+            var list = document.getElementById('recipe-type-list');
+            var items = config.creative.recipeTypes.sort(function(a, b) { return a.sort - b.sort; });
+            var html = '';
+            items.forEach(function(item) {
+                var scNames = item.shortcuts.map(function(s) { return getShortcutName(s); }).join(', ');
+                html += '<tr draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'recipeType\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'recipeType\')">';
+                html += '<td>☰</td>';
+                html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'recipeType\', ' + item.id + ', this.value)"></td>';
+                html += '<td>' + item.name + '</td><td>' + scNames + '</td>';
+                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.enable ? ' checked' : '') + ' onchange="toggleRecipeTypeEnable(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openRecipeTypeModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteRecipeType(' + item.id + ')">删除</button></td></tr>';
+            });
+            list.innerHTML = html;
+            updateRecipeTypeFilter();
+        }
+
+        function toggleRecipeTypeEnable(id, enable) {
+            var item = config.creative.recipeTypes.find(function(i) { return i.id === id; });
+            item.enable = enable;
+            localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            showToast(enable ? '已启用' : '已禁用');
+        }
+
+        function openRecipeTypeModal(id) {
+            editingId = id || null;
+            modalType = 'recipeType';
+            var item = id ? config.creative.recipeTypes.find(function(i) { return i.id === id; }) : null;
+            document.getElementById('modal-title').innerText = id ? '编辑配方类型' : '添加配方类型';
+            var scChecks = ['modifyImage', 'animateImage', 'aiVideo', 'wallpaper', 'writeSong'];
+            var scChecked = {};
+            scChecks.forEach(function(sc) { scChecked[sc] = item && item.shortcuts.includes(sc) ? 'checked' : ''; });
+            var enableChecked = item ? (item.enable ? 'checked' : '') : 'checked';
+            document.getElementById('modal-body').innerHTML =
+                '<div class="form-group"><label>创作配方类型</label><input type="text" id="rt-name" required value="' + (item ? item.name : '') + '"></div>' +
+                '<div class="form-group"><label>排序</label><input type="number" id="rt-sort" value="' + (item ? item.sort : config.creative.recipeTypes.length + 1) + '" min="1"></div>' +
+                '<div class="form-group"><label>适用的快捷入口</label><div class="checkbox-group">' +
+                '<label><input type="checkbox" id="rt-sc-modifyImage" ' + scChecked.modifyImage + '> 修改图片</label>' +
+                '<label><input type="checkbox" id="rt-sc-animateImage" ' + scChecked.animateImage + '> 图片动起来</label>' +
+                '<label><input type="checkbox" id="rt-sc-aiVideo" ' + scChecked.aiVideo + '> AI做视频</label>' +
+                '<label><input type="checkbox" id="rt-sc-wallpaper" ' + scChecked.wallpaper + '> 个性化壁纸</label>' +
+                '<label><input type="checkbox" id="rt-sc-writeSong" ' + scChecked.writeSong + '> 写一首歌</label></div></div>' +
+                '<div class="form-group"><label>是否启用</label><label class="toggle-switch"><input type="checkbox" id="rt-enable" ' + enableChecked + '><span class="toggle-slider"></span></label></div>';
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function deleteRecipeType(id) {
+            if (confirm('确定要删除该类型吗？')) {
+                config.creative.recipeTypes = config.creative.recipeTypes.filter(function(i) { return i.id !== id; });
+                config.creative.recipes = config.creative.recipes.filter(function(i) { return i.typeId !== id; });
+                renderRecipeTypeList();
+                renderRecipeList();
+                showToast('类型已删除');
+                localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            }
+        }
+
+        // Recipe
+        function updateRecipeTypeFilter() {
+            var select = document.getElementById('recipe-filter-type');
+            var currentVal = select.value;
+            select.innerHTML = '<option value="all">全部</option>';
+            config.creative.recipeTypes.forEach(function(type) {
+                select.innerHTML += '<option value="' + type.id + '">' + type.name + '</option>';
+            });
+            select.value = currentVal;
+        }
+
+        function renderRecipeList() {
+            var list = document.getElementById('recipe-list');
+            var filterType = document.getElementById('recipe-filter-type').value;
+            var items = config.creative.recipes.filter(function(r) {
+                return filterType === 'all' || r.typeId === parseInt(filterType);
+            }).sort(function(a, b) { return a.sort - b.sort; });
+            var html = '';
+            items.forEach(function(item) {
+                var typeName = '';
+                var type = config.creative.recipeTypes.find(function(t) { return t.id === item.typeId; });
+                if (type) typeName = type.name;
+                html += '<tr draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'recipe\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'recipe\')">';
+                html += '<td>☰</td>';
+                html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'recipe\', ' + item.id + ', this.value)"></td>';
+                html += '<td>' + item.name + '</td><td>' + typeName + '</td><td>' + item.prompt + '</td>';
+                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.enable ? ' checked' : '') + ' onchange="toggleRecipeEnable(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openRecipeModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteRecipe(' + item.id + ')">删除</button></td></tr>';
+            });
+            list.innerHTML = html;
+        }
+
+        function toggleRecipeEnable(id, enable) {
+            var item = config.creative.recipes.find(function(i) { return i.id === id; });
+            item.enable = enable;
+            localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            showToast(enable ? '已启用' : '已禁用');
+        }
+
+        function openRecipeModal(id) {
+            editingId = id || null;
+            modalType = 'recipe';
+            var item = id ? config.creative.recipes.find(function(i) { return i.id === id; }) : null;
+            document.getElementById('modal-title').innerText = id ? '编辑具体配方' : '添加具体配方';
+            var typeOptions = '';
+            config.creative.recipeTypes.forEach(function(type) {
+                typeOptions += '<option value="' + type.id + '"' + (item && item.typeId === type.id ? ' selected' : '') + '>' + type.name + '</option>';
+            });
+            var enableChecked = item ? (item.enable ? 'checked' : '') : 'checked';
+            document.getElementById('modal-body').innerHTML =
+                '<div class="form-group"><label>具体配方名称</label><input type="text" id="rc-name" required value="' + (item ? item.name : '') + '"></div>' +
+                '<div class="form-group"><label>配方所属类型</label><select id="rc-type">' + typeOptions + '</select></div>' +
+                '<div class="form-group"><label>排序</label><input type="number" id="rc-sort" value="' + (item ? item.sort : config.creative.recipes.length + 1) + '" min="1"></div>' +
+                '<div class="form-group"><label>关联提示词</label><input type="text" id="rc-prompt" value="' + (item ? item.prompt : '') + '"></div>' +
+                '<div class="form-group"><label>是否启用</label><label class="toggle-switch"><input type="checkbox" id="rc-enable" ' + enableChecked + '><span class="toggle-slider"></span></label></div>';
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function deleteRecipe(id) {
+            if (confirm('确定要删除该配方吗？')) {
+                config.creative.recipes = config.creative.recipes.filter(function(i) { return i.id !== id; });
+                renderRecipeList();
+                showToast('配方已删除');
+                localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            }
+        }
+
+        // CallAvatar
+        function renderCallAvatarList() {
+            var list = document.getElementById('call-avatar-list');
+            var items = config.newUser.callAvatar.sort(function(a, b) { return a.sort - b.sort; });
+            var html = '';
+            items.forEach(function(item) {
+                html += '<tr draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'callAvatar\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'callAvatar\')">';
+                html += '<td>☰</td>';
+                html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'callAvatar\', ' + item.id + ', this.value)"></td>';
+                html += '<td>' + item.name + '</td><td>' + item.templateId + '</td>';
+                html += '<td>' + (item.previewImage ? '<img src="' + item.previewImage + '" class="responsive-img">' : '-') + '</td>';
+                html += '<td>' + (item.demoVideo ? '<video src="' + item.demoVideo + '" class="responsive-img" controls></video>' : '-') + '</td>';
+                html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openCallAvatarModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteCallAvatar(' + item.id + ')">删除</button></td></tr>';
+            });
+            list.innerHTML = html;
+        }
+
+        function openCallAvatarModal(id) {
+            editingId = id || null;
+            modalType = 'callAvatar';
+            var item = id ? config.newUser.callAvatar.find(function(i) { return i.id === id; }) : null;
+            document.getElementById('modal-title').innerText = id ? '编辑通话头像模板' : '添加通话头像模板';
+            var imgDisplay = item && item.previewImage ? 'display:block;' : 'display:none;';
+            var videoDisplay = item && item.demoVideo ? 'display:block;' : 'display:none;';
+            document.getElementById('modal-body').innerHTML =
+                '<div class="form-group"><label>模板名称</label><input type="text" id="ca-name" required value="' + (item ? item.name : '') + '"></div>' +
+                '<div class="form-group"><label>模板ID</label><input type="text" id="ca-id" required value="' + (item ? item.templateId : '') + '"></div>' +
+                '<div class="form-group"><label>排序</label><input type="number" id="ca-sort" value="' + (item ? item.sort : config.newUser.callAvatar.length + 1) + '" min="1"></div>' +
+                '<div class="form-group"><label>模板预览图</label><div class="upload-area" onclick="triggerUpload(\'ca-img-upload\')" id="ca-img-area">' +
+                '<img id="ca-img-preview" src="' + (item ? item.previewImage : '') + '" style="' + imgDisplay + '"><div class="upload-text">点击上传预览图</div></div>' +
+                '<input type="file" id="ca-img-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(this, \'ca-img-preview\', \'ca-img-area\')"></div>' +
+                '<div class="form-group"><label>模板Demo视频</label><div class="upload-area" onclick="triggerUpload(\'ca-video-upload\')" id="ca-video-area">' +
+                '<video id="ca-video-preview" src="' + (item ? item.demoVideo : '') + '" style="' + videoDisplay + '" controls></video><div class="upload-text">点击上传Demo视频</div></div>' +
+                '<input type="file" id="ca-video-upload" accept="video/*" style="display:none;" onchange="handleVideoUpload(this, \'ca-video-preview\', \'ca-video-area\')"></div>';
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function deleteCallAvatar(id) {
+            if (confirm('确定要删除该模板吗？')) {
+                config.newUser.callAvatar = config.newUser.callAvatar.filter(function(i) { return i.id !== id; });
+                renderCallAvatarList();
+                showToast('模板已删除');
+                localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            }
+        }
+
+        function saveModalData() {
+            var success = false;
+            if (modalType === 'playCard') {
+                var pcSort = parseInt(document.getElementById('pc-sort').value);
+                var pcTitle = document.getElementById('pc-title').value.trim();
+                var pcButton = document.getElementById('pc-button').value.trim();
+                var pcResponse = document.getElementById('pc-response').value;
+                var pcImage = document.getElementById('pc-image-preview').src;
+                var pcTemplate = document.getElementById('pc-template').value;
+                var pcPrompt = document.getElementById('pc-prompt').value;
+                var pcDefImg = document.getElementById('pc-defimg-preview').src;
+                var pcLink = document.getElementById('pc-link').value;
+                var pcShow = document.getElementById('pc-show').checked;
+                if (!pcTitle || !pcButton) { showErrorToast('请填写必填项'); return; }
+                var pcImg = pcImage && pcImage !== 'about:blank' && document.getElementById('pc-image-preview').style.display !== 'none' ? pcImage : '';
+                var pcDImg = pcDefImg && pcDefImg !== 'about:blank' && document.getElementById('pc-defimg-preview').style.display !== 'none' ? pcDefImg : '';
+                if (editingId) {
+                    var pci = config.coldStart.playCards.find(function(i) { return i.id === editingId; });
+                    pci.sort = pcSort; pci.title = pcTitle; pci.buttonText = pcButton; pci.responseType = pcResponse;
+                    pci.image = pcImg; pci.templateId = pcTemplate; pci.defaultPrompt = pcPrompt; pci.defaultImage = pcDImg; pci.link = pcLink; pci.show = pcShow;
+                } else {
+                    config.coldStart.playCards.push({ id: Date.now(), sort: pcSort, title: pcTitle, buttonText: pcButton, responseType: pcResponse, image: pcImg, templateId: pcTemplate, defaultPrompt: pcPrompt, defaultImage: pcDImg, link: pcLink, show: pcShow });
+                }
+                renderPlayCardList();
+                success = true;
+            } else if (modalType === 'recommend') {
+                var recText = document.getElementById('rec-text').value.trim();
+                var recSort = parseInt(document.getElementById('rec-sort').value);
+                var recPrompt = document.getElementById('rec-prompt').value;
+                var recImg = document.getElementById('rec-img-preview').src;
+                var recIntent = document.getElementById('rec-intent').value;
+                var recShow = document.getElementById('rec-show').checked;
+                if (!recText) { showErrorToast('请填写词条文案'); return; }
+                var rImg = recImg && recImg !== 'about:blank' && document.getElementById('rec-img-preview').style.display !== 'none' ? recImg : '';
+                if (editingId) {
+                    var ri = config.coldStart.recommend.find(function(i) { return i.id === editingId; });
+                    ri.text = recText; ri.sort = recSort; ri.prompt = recPrompt; ri.referenceImage = rImg; ri.intent = recIntent; ri.show = recShow;
+                } else {
+                    config.coldStart.recommend.push({ id: Date.now(), text: recText, sort: recSort, prompt: recPrompt, referenceImage: rImg, intent: recIntent, show: recShow });
+                }
+                renderRecommendList();
+                success = true;
+            } else if (modalType === 'shortcut') {
+                var scName = document.getElementById('sc-name').value.trim();
+                var scSort = parseInt(document.getElementById('sc-sort').value);
+                var scDefault = document.getElementById('sc-default').value;
+                var scAction = document.getElementById('sc-action').value;
+                var scLink = document.getElementById('sc-link').value;
+                var scShow = document.getElementById('sc-show').checked;
+                var scPlatforms = [];
+                if (document.getElementById('sc-app').checked) scPlatforms.push('APP');
+                if (document.getElementById('sc-mini').checked) scPlatforms.push('小程序');
+                if (document.getElementById('sc-h5').checked) scPlatforms.push('H5');
+                if (!scName) { showErrorToast('请填写入口名称'); return; }
+                if (scAction === 'page' && !scLink) { showErrorToast('跳转页面需填写跳转链接'); return; }
+                if (editingId) {
+                    var si = config.creative.shortcuts.find(function(i) { return i.id === editingId; });
+                    si.name = scName; si.sort = scSort; si.defaultText = scDefault; si.actionType = scAction; si.link = scLink; si.platforms = scPlatforms; si.show = scShow;
+                } else {
+                    config.creative.shortcuts.push({ id: Date.now(), name: scName, sort: scSort, defaultText: scDefault, actionType: scAction, link: scLink, platforms: scPlatforms, show: scShow });
+                }
+                renderShortcutList();
+                success = true;
+            } else if (modalType === 'assist') {
+                var asText = document.getElementById('as-text').value.trim();
+                var asSort = parseInt(document.getElementById('as-sort').value);
+                var asPrompt = document.getElementById('as-prompt').value;
+                var asShortcut = document.getElementById('as-shortcut').value;
+                var asEnable = document.getElementById('as-enable').checked;
+                var asImages = [];
+                var asImgPreview = document.getElementById('as-images-preview').getElementsByTagName('img');
+                for (var i = 0; i < asImgPreview.length; i++) { asImages.push(asImgPreview[i].src); }
+                if (!asText) { showErrorToast('请填写词条文案'); return; }
+                if (editingId) {
+                    var ai = config.creative.assist.find(function(i) { return i.id === editingId; });
+                    ai.text = asText; ai.sort = asSort; ai.prompt = asPrompt; ai.referenceImages = asImages; ai.shortcut = asShortcut; ai.enable = asEnable;
+                } else {
+                    config.creative.assist.push({ id: Date.now(), text: asText, sort: asSort, prompt: asPrompt, referenceImages: asImages, shortcut: asShortcut, enable: asEnable });
+                }
+                renderAssistList();
+                success = true;
+            } else if (modalType === 'recipeType') {
+                var rtName = document.getElementById('rt-name').value.trim();
+                var rtSort = parseInt(document.getElementById('rt-sort').value);
+                var rtEnable = document.getElementById('rt-enable').checked;
+                var rtShortcuts = [];
+                ['modifyImage', 'animateImage', 'aiVideo', 'wallpaper', 'writeSong'].forEach(function(sc) {
+                    if (document.getElementById('rt-sc-' + sc).checked) rtShortcuts.push(sc);
+                });
+                if (!rtName) { showErrorToast('请填写类型名称'); return; }
+                if (editingId) {
+                    var rti = config.creative.recipeTypes.find(function(i) { return i.id === editingId; });
+                    rti.name = rtName; rti.sort = rtSort; rti.shortcuts = rtShortcuts; rti.enable = rtEnable;
+                } else {
+                    config.creative.recipeTypes.push({ id: Date.now(), name: rtName, sort: rtSort, shortcuts: rtShortcuts, enable: rtEnable });
+                }
+                renderRecipeTypeList();
+                success = true;
+            } else if (modalType === 'recipe') {
+                var rcName = document.getElementById('rc-name').value.trim();
+                var rcType = parseInt(document.getElementById('rc-type').value);
+                var rcSort = parseInt(document.getElementById('rc-sort').value);
+                var rcPrompt = document.getElementById('rc-prompt').value;
+                var rcEnable = document.getElementById('rc-enable').checked;
+                if (!rcName) { showErrorToast('请填写配方名称'); return; }
+                if (editingId) {
+                    var rci = config.creative.recipes.find(function(i) { return i.id === editingId; });
+                    rci.name = rcName; rci.typeId = rcType; rci.sort = rcSort; rci.prompt = rcPrompt; rci.enable = rcEnable;
+                } else {
+                    config.creative.recipes.push({ id: Date.now(), name: rcName, typeId: rcType, sort: rcSort, prompt: rcPrompt, enable: rcEnable });
+                }
+                renderRecipeList();
+                success = true;
+            } else if (modalType === 'callAvatar') {
+                var caName = document.getElementById('ca-name').value.trim();
+                var caId = document.getElementById('ca-id').value.trim();
+                var caSort = parseInt(document.getElementById('ca-sort').value);
+                var caImg = document.getElementById('ca-img-preview').src;
+                var caVideo = document.getElementById('ca-video-preview').src;
+                if (!caName || !caId) { showErrorToast('请填写必填项'); return; }
+                var cImg = caImg && caImg !== 'about:blank' && document.getElementById('ca-img-preview').style.display !== 'none' ? caImg : '';
+                var cVideo = caVideo && caVideo !== 'about:blank' && document.getElementById('ca-video-preview').style.display !== 'none' ? caVideo : '';
+                if (editingId) {
+                    var cai = config.newUser.callAvatar.find(function(i) { return i.id === editingId; });
+                    cai.name = caName; cai.templateId = caId; cai.sort = caSort; cai.previewImage = cImg; cai.demoVideo = cVideo;
+                } else {
+                    config.newUser.callAvatar.push({ id: Date.now(), name: caName, templateId: caId, sort: caSort, previewImage: cImg, demoVideo: cVideo });
+                }
+                renderCallAvatarList();
+                success = true;
+            }
+            if (success) {
+                closeModal();
+                showToast('保存成功');
+                localStorage.setItem('dcmsConfig', JSON.stringify(config));
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
