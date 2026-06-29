@@ -82,6 +82,8 @@
         .search-result-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
         .search-result-item:hover { background: #f8f9ff; }
         .search-result-item:last-child { border-bottom: none; }
+        .status-yes { display: inline-block; padding: 3px 10px; background: #d4edda; color: #155724; border-radius: 10px; font-size: 12px; }
+        .status-no { display: inline-block; padding: 3px 10px; background: #f8d7da; color: #721c24; border-radius: 10px; font-size: 12px; }
         .filter-bar { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; }
     </style>
 </head>
@@ -566,7 +568,21 @@
             if (draggedIndex !== targetIndex) {
                 var draggedItemData = items.splice(draggedIndex, 1)[0];
                 items.splice(targetIndex, 0, draggedItemData);
-                items.forEach(function(item, index) { item.sort = index + 1; });
+                if (listType === 'recipe') {
+                    var targetItem = items[targetIndex];
+                    draggedItemData.typeId = targetItem.typeId;
+                    var typeGroups = {};
+                    items.forEach(function(i) {
+                        if (!typeGroups[i.typeId]) typeGroups[i.typeId] = [];
+                        typeGroups[i.typeId].push(i);
+                    });
+                    Object.keys(typeGroups).forEach(function(typeId) {
+                        typeGroups[typeId].sort(function(a, b) { return a.sort - b.sort; });
+                        typeGroups[typeId].forEach(function(i, idx) { i.sort = idx + 1; });
+                    });
+                } else {
+                    items.forEach(function(item, index) { item.sort = index + 1; });
+                }
                 localStorage.setItem('dcmsConfig', JSON.stringify(config));
                 showToast('排序已更新');
             }
@@ -594,8 +610,20 @@
             var item = items.find(function(i) { return i.id === id; });
             if (item) {
                 item.sort = parseInt(newSort) || 1;
-                items.sort(function(a, b) { return a.sort - b.sort; });
-                items.forEach(function(i, idx) { i.sort = idx + 1; });
+                if (listType === 'recipe') {
+                    var typeGroups = {};
+                    items.forEach(function(i) {
+                        if (!typeGroups[i.typeId]) typeGroups[i.typeId] = [];
+                        typeGroups[i.typeId].push(i);
+                    });
+                    Object.keys(typeGroups).forEach(function(typeId) {
+                        typeGroups[typeId].sort(function(a, b) { return a.sort - b.sort; });
+                        typeGroups[typeId].forEach(function(i, idx) { i.sort = idx + 1; });
+                    });
+                } else {
+                    items.sort(function(a, b) { return a.sort - b.sort; });
+                    items.forEach(function(i, idx) { i.sort = idx + 1; });
+                }
                 localStorage.setItem('dcmsConfig', JSON.stringify(config));
                 showToast('排序已更新');
                 if (listType === 'playCard') renderPlayCardList();
@@ -619,7 +647,7 @@
                 html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'playCard\', ' + item.id + ', this.value)"></td>';
                 html += '<td>' + item.title + '</td><td>' + item.buttonText + '</td><td>' + getResponseTypeName(item.responseType) + '</td>';
                 html += '<td>' + (item.image ? '<img src="' + item.image + '" class="responsive-img">' : '-') + '</td>';
-                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.show ? ' checked' : '') + ' onchange="togglePlayCardShow(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td>' + (item.show ? '<span class="status-yes">是</span>' : '<span class="status-no">否</span>') + '</td>';
                 html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openPlayCardModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deletePlayCard(' + item.id + ')">删除</button></td></tr>';
             });
             list.innerHTML = html;
@@ -696,7 +724,7 @@
                 html += '<td>' + item.text + '</td><td>' + item.prompt + '</td>';
                 html += '<td>' + (item.referenceImage ? '<img src="' + item.referenceImage + '" class="responsive-img">' : '-') + '</td>';
                 html += '<td>' + getIntentName(item.intent) + '</td>';
-                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.show ? ' checked' : '') + ' onchange="toggleRecommendShow(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td>' + (item.show ? '<span class="status-yes">是</span>' : '<span class="status-no">否</span>') + '</td>';
                 html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openRecommendModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteRecommend(' + item.id + ')">删除</button></td></tr>';
             });
             list.innerHTML = html;
@@ -755,7 +783,7 @@
                 html += '<td>' + item.name + '</td><td>' + item.defaultText + '</td>';
                 html += '<td>' + (item.actionType === 'input' ? '拉起输入框' : '跳转页面') + '</td>';
                 html += '<td>' + item.platforms.join(', ') + '</td>';
-                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.show ? ' checked' : '') + ' onchange="toggleShortcutShow(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td>' + (item.show ? '<span class="status-yes">是</span>' : '<span class="status-no">否</span>') + '</td>';
                 html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openShortcutModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteShortcut(' + item.id + ')">删除</button></td></tr>';
             });
             list.innerHTML = html;
@@ -823,7 +851,7 @@
                     item.referenceImages.forEach(function(img) { imgs += '<img src="' + img + '" class="responsive-img" style="margin-right:4px;">'; });
                 }
                 html += '<td>' + (imgs || '-') + '</td><td>' + getShortcutName(item.shortcut) + '</td>';
-                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.enable ? ' checked' : '') + ' onchange="toggleAssistEnable(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td>' + (item.enable ? '<span class="status-yes">是</span>' : '<span class="status-no">否</span>') + '</td>';
                 html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openAssistModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteAssist(' + item.id + ')">删除</button></td></tr>';
             });
             list.innerHTML = html;
@@ -904,7 +932,7 @@
                 html += '<td>☰</td>';
                 html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'recipeType\', ' + item.id + ', this.value)"></td>';
                 html += '<td>' + item.name + '</td><td>' + scNames + '</td>';
-                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.enable ? ' checked' : '') + ' onchange="toggleRecipeTypeEnable(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td>' + (item.enable ? '<span class="status-yes">是</span>' : '<span class="status-no">否</span>') + '</td>';
                 html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openRecipeTypeModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteRecipeType(' + item.id + ')">删除</button></td></tr>';
             });
             list.innerHTML = html;
@@ -965,19 +993,36 @@
         function renderRecipeList() {
             var list = document.getElementById('recipe-list');
             var filterType = document.getElementById('recipe-filter-type').value;
+            var isAll = filterType === 'all';
             var items = config.creative.recipes.filter(function(r) {
-                return filterType === 'all' || r.typeId === parseInt(filterType);
-            }).sort(function(a, b) { return a.sort - b.sort; });
-            var html = '';
+                return isAll || r.typeId === parseInt(filterType);
+            });
+            var typeGroups = {};
             items.forEach(function(item) {
+                if (!typeGroups[item.typeId]) typeGroups[item.typeId] = [];
+                typeGroups[item.typeId].push(item);
+            });
+            Object.keys(typeGroups).forEach(function(typeId) {
+                typeGroups[typeId].sort(function(a, b) { return a.sort - b.sort; });
+            });
+            var sortedItems = [];
+            var sortedTypeIds = Object.keys(typeGroups).sort(function(a, b) { return parseInt(a) - parseInt(b); });
+            sortedTypeIds.forEach(function(typeId) {
+                sortedItems = sortedItems.concat(typeGroups[typeId]);
+            });
+            var html = '';
+            sortedItems.forEach(function(item) {
                 var typeName = '';
                 var type = config.creative.recipeTypes.find(function(t) { return t.id === item.typeId; });
                 if (type) typeName = type.name;
-                html += '<tr draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'recipe\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'recipe\')">';
-                html += '<td>☰</td>';
-                html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'recipe\', ' + item.id + ', this.value)"></td>';
+                var dragHandle = isAll ? '' : '☰';
+                var sortInput = isAll ? '-' : '<input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'recipe\', ' + item.id + ', this.value)">';
+                var dragAttrs = isAll ? '' : 'draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'recipe\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'recipe\')"';
+                html += '<tr ' + dragAttrs + '>';
+                html += '<td>' + dragHandle + '</td>';
+                html += '<td>' + sortInput + '</td>';
                 html += '<td>' + item.name + '</td><td>' + typeName + '</td><td>' + item.prompt + '</td>';
-                html += '<td><label class="toggle-switch"><input type="checkbox"' + (item.enable ? ' checked' : '') + ' onchange="toggleRecipeEnable(' + item.id + ', this.checked)"><span class="toggle-slider"></span></label></td>';
+                html += '<td>' + (item.enable ? '<span class="status-yes">是</span>' : '<span class="status-no">否</span>') + '</td>';
                 html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openRecipeModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteRecipe(' + item.id + ')">删除</button></td></tr>';
             });
             list.innerHTML = html;
@@ -1003,7 +1048,7 @@
             document.getElementById('modal-body').innerHTML =
                 '<div class="form-group"><label>具体配方名称</label><input type="text" id="rc-name" required value="' + (item ? item.name : '') + '"></div>' +
                 '<div class="form-group"><label>配方所属类型</label><select id="rc-type">' + typeOptions + '</select></div>' +
-                '<div class="form-group"><label>排序</label><input type="number" id="rc-sort" value="' + (item ? item.sort : config.creative.recipes.length + 1) + '" min="1"></div>' +
+                '<div class="form-group"><label>排序</label><input type="number" id="rc-sort" value="' + (item ? item.sort : (config.creative.recipes.filter(function(r) { return r.typeId === (item ? item.typeId : (config.creative.recipeTypes.length > 0 ? config.creative.recipeTypes[0].id : 1)); }).length + 1)) + '" min="1"></div>' +
                 '<div class="form-group"><label>关联提示词</label><input type="text" id="rc-prompt" value="' + (item ? item.prompt : '') + '"></div>' +
                 '<div class="form-group"><label>是否启用</label><label class="toggle-switch"><input type="checkbox" id="rc-enable" ' + enableChecked + '><span class="toggle-slider"></span></label></div>';
             document.getElementById('modal').classList.add('show');
