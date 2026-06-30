@@ -84,7 +84,11 @@
         .search-result-item:last-child { border-bottom: none; }
         .status-yes { display: inline-block; padding: 3px 10px; background: #d4edda; color: #155724; border-radius: 10px; font-size: 12px; }
         .status-no { display: inline-block; padding: 3px 10px; background: #f8d7da; color: #721c24; border-radius: 10px; font-size: 12px; }
-        .filter-bar { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; }
+        .filter-bar { display: flex; gap: 24px; margin-bottom: 16px; align-items: center; padding: 12px 16px; background: #f8f9fa; border-radius: 8px; }
+        .filter-item { display: flex; align-items: center; gap: 8px; }
+        .filter-item label { font-weight: 500; }
+        .filter-item select { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .filter-status { padding: 4px 10px; background: #e7f3ff; color: #0c63e4; border-radius: 12px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -183,6 +187,15 @@
                         <div class="card-header">
                             <h2>辅助词条列表</h2>
                             <button class="btn btn-primary btn-sm" onclick="openAssistModal()">添加词条</button>
+                        </div>
+                        <div class="filter-bar">
+                            <div class="filter-item">
+                                <label>筛选快捷入口：</label>
+                                <select id="assist-filter-shortcut" onchange="onAssistFilterChange()">
+                                    <option value="all">全部</option>
+                                </select>
+                                <span id="assist-filter-status" class="filter-status"></span>
+                            </div>
                         </div>
                         <table class="table">
                             <thead><tr><th>拖拽排序</th><th>排序</th><th>词条文案</th><th>填入提示词</th><th>参考图</th><th>关联快捷入口</th><th>是否启用</th><th>操作</th></tr></thead>
@@ -390,7 +403,9 @@
             renderPlayCardList();
             renderRecommendList();
             renderShortcutList();
-            renderAssistList();
+            initAssistFilter();
+            var assistFilter = localStorage.getItem('assistFilterShortcut') || 'all';
+            renderAssistList(assistFilter);
             renderRecipeTypeList();
             renderRecipeList();
             renderCallAvatarList();
@@ -564,7 +579,7 @@
             if (listType === 'playCard') renderPlayCardList();
             else if (listType === 'recommend') renderRecommendList();
             else if (listType === 'shortcut') renderShortcutList();
-            else if (listType === 'assist') renderAssistList();
+            else if (listType === 'assist') renderAssistList(localStorage.getItem('assistFilterShortcut') || 'all');
             else if (listType === 'recipeType') renderRecipeTypeList();
             else if (listType === 'recipe') renderRecipeList();
             else if (listType === 'callAvatar') renderCallAvatarList();
@@ -602,7 +617,7 @@
                 if (listType === 'playCard') renderPlayCardList();
                 else if (listType === 'recommend') renderRecommendList();
                 else if (listType === 'shortcut') renderShortcutList();
-                else if (listType === 'assist') renderAssistList();
+                else if (listType === 'assist') renderAssistList(localStorage.getItem('assistFilterShortcut') || 'all');
                 else if (listType === 'recipeType') renderRecipeTypeList();
                 else if (listType === 'recipe') renderRecipeList();
                 else if (listType === 'callAvatar') renderCallAvatarList();
@@ -818,14 +833,23 @@
         }
 
         // Assist
-        function renderAssistList() {
+        function renderAssistList(filterShortcut) {
             var list = document.getElementById('assist-list');
-            var items = config.creative.assist.sort(function(a, b) { return a.sort - b.sort; });
+            var isAll = filterShortcut === 'all';
+            var items = config.creative.assist.filter(function(item) {
+                return isAll || item.shortcut === filterShortcut;
+            });
+            items.sort(function(a, b) {
+                return a.sort - b.sort;
+            });
             var html = '';
             items.forEach(function(item) {
-                html += '<tr draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'assist\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'assist\')">';
-                html += '<td>☰</td>';
-                html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'assist\', ' + item.id + ', this.value)"></td>';
+                var dragAttrs = isAll ? 'draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'assist\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'assist\')"' : '';
+                var dragHandle = isAll ? '☰' : '';
+                var sortInput = isAll ? '<input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'assist\', ' + item.id + ', this.value)">' : '-';
+                html += '<tr ' + dragAttrs + '>';
+                html += '<td>' + dragHandle + '</td>';
+                html += '<td>' + sortInput + '</td>';
                 html += '<td>' + item.text + '</td><td>' + item.prompt + '</td>';
                 var imgs = '';
                 if (item.referenceImages && item.referenceImages.length > 0) {
@@ -836,6 +860,46 @@
                 html += '<td class="action-btns"><button class="btn btn-secondary btn-sm" onclick="openAssistModal(' + item.id + ')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteAssist(' + item.id + ')">删除</button></td></tr>';
             });
             list.innerHTML = html;
+            updateAssistFilterStatus(filterShortcut, items.length);
+        }
+
+        function initAssistFilter() {
+            var select = document.getElementById('assist-filter-shortcut');
+            select.innerHTML = '<option value="all">全部</option>';
+            var shortcutMap = {
+                'modifyImage': '修改图片',
+                'animateImage': '图片动起来',
+                'aiVideo': 'AI做视频',
+                'wallpaper': '个性化壁纸',
+                'writeSong': '写一首歌'
+            };
+            Object.keys(shortcutMap).forEach(function(key) {
+                select.innerHTML += '<option value="' + key + '">' + shortcutMap[key] + '</option>';
+            });
+            var savedFilter = localStorage.getItem('assistFilterShortcut') || 'all';
+            select.value = savedFilter;
+        }
+
+        function onAssistFilterChange() {
+            var filterShortcut = document.getElementById('assist-filter-shortcut').value;
+            localStorage.setItem('assistFilterShortcut', filterShortcut);
+            renderAssistList(filterShortcut);
+        }
+
+        function updateAssistFilterStatus(filterShortcut, count) {
+            var status = document.getElementById('assist-filter-status');
+            var shortcutMap = {
+                'modifyImage': '修改图片',
+                'animateImage': '图片动起来',
+                'aiVideo': 'AI做视频',
+                'wallpaper': '个性化壁纸',
+                'writeSong': '写一首歌'
+            };
+            if (filterShortcut === 'all') {
+                status.textContent = '';
+            } else {
+                status.textContent = '已筛选：' + (shortcutMap[filterShortcut] || filterShortcut) + ' (' + count + '条)';
+            }
         }
 
         function toggleAssistEnable(id, enable) {
@@ -896,7 +960,7 @@
         function deleteAssist(id) {
             if (confirm('确定要删除该词条吗？')) {
                 config.creative.assist = config.creative.assist.filter(function(i) { return i.id !== id; });
-                renderAssistList();
+                renderAssistList(localStorage.getItem('assistFilterShortcut') || 'all');
                 showToast('词条已删除');
                 localStorage.setItem('dcmsConfig', JSON.stringify(config));
             }
@@ -1172,7 +1236,7 @@
                 } else {
                     config.creative.assist.push({ id: Date.now(), text: asText, sort: asSort, prompt: asPrompt, referenceImages: asImages, shortcut: asShortcut, enable: asEnable });
                 }
-                renderAssistList();
+                renderAssistList(localStorage.getItem('assistFilterShortcut') || 'all');
                 success = true;
             } else if (modalType === 'recipeType') {
                 var rtName = document.getElementById('rt-name').value.trim();
