@@ -95,10 +95,6 @@
     <div class="main-content">
         <div class="header">
             <h1>智能体配置</h1>
-            <div>
-                <button class="btn btn-primary" onclick="saveAllConfig()">保存配置</button>
-                <button class="btn btn-secondary" onclick="resetConfig()">重置</button>
-            </div>
         </div>
         <div class="content-area">
             <div class="tabs">
@@ -176,7 +172,7 @@
                             <button class="btn btn-primary btn-sm" onclick="openShortcutModal()">添加入口</button>
                         </div>
                         <table class="table">
-                            <thead><tr><th>拖拽排序</th><th>排序</th><th>名称</th><th>默认提示文案</th><th>行为类型</th><th>适用端</th><th>是否展示</th><th>操作</th></tr></thead>
+                            <thead><tr><th>拖拽排序</th><th>排序</th><th>名称</th><th>图标</th><th>agentid</th><th>默认提示文案</th><th>行为类型</th><th>适用端</th><th>是否展示</th><th>操作</th></tr></thead>
                             <tbody id="shortcut-list"></tbody>
                         </table>
                     </div>
@@ -317,11 +313,11 @@
             },
             creative: {
                 shortcuts: [
-                    { id: 1, name: '修改图片', sort: 1, defaultText: '选择图片，可输入美化、消除、换背景等想法', actionType: 'input', link: '', show: true, platforms: ['APP', '小程序'] },
-                    { id: 2, name: '图片动起来', sort: 2, defaultText: '选择图片，可让它动起来变成5秒视频', actionType: 'input', link: '', show: true, platforms: ['APP', 'H5'] },
-                    { id: 3, name: 'AI做视频', sort: 3, defaultText: '输入灵感，创作你想要的短视频', actionType: 'input', link: '', show: true, platforms: ['APP', '小程序', 'H5'] },
-                    { id: 4, name: '个性化壁纸', sort: 4, defaultText: '', actionType: 'page', link: '/wallpaper', show: true, platforms: ['APP'] },
-                    { id: 5, name: '写一首歌', sort: 5, defaultText: '输入灵感，写一首表达自己的歌', actionType: 'input', link: '', show: true, platforms: ['APP', '小程序'] }
+                    { id: 1, name: '修改图片', sort: 1, defaultText: '选择图片，可输入美化、消除、换背景等想法', actionType: 'input', link: '', show: true, platforms: ['APP', '小程序'], icon: '', agentid: '' },
+                    { id: 2, name: '图片动起来', sort: 2, defaultText: '选择图片，可让它动起来变成5秒视频', actionType: 'input', link: '', show: true, platforms: ['APP', 'H5'], icon: '', agentid: '' },
+                    { id: 3, name: 'AI做视频', sort: 3, defaultText: '输入灵感，创作你想要的短视频', actionType: 'input', link: '', show: true, platforms: ['APP', '小程序', 'H5'], icon: '', agentid: '' },
+                    { id: 4, name: '个性化壁纸', sort: 4, defaultText: '', actionType: 'page', link: '/wallpaper', show: true, platforms: ['APP'], icon: '', agentid: '' },
+                    { id: 5, name: '写一首歌', sort: 5, defaultText: '输入灵感，写一首表达自己的歌', actionType: 'input', link: '', show: true, platforms: ['APP', '小程序'], icon: '', agentid: '' }
                 ],
                 assist: [
                     { id: 1, text: '美化图片', sort: 1, prompt: '美化图片，调整亮度对比度', referenceImages: [], shortcut: 'modifyImage', enable: true },
@@ -370,7 +366,7 @@
                     config = parsed;
                     if (config.coldStart.playCards) config.coldStart.playCards.forEach(function(i) { if (i.show === undefined) i.show = true; });
                     if (config.coldStart.recommend) config.coldStart.recommend.forEach(function(i) { if (i.show === undefined) i.show = true; });
-                    if (config.creative.shortcuts) config.creative.shortcuts.forEach(function(i) { if (i.show === undefined) i.show = true; });
+                    if (config.creative.shortcuts) config.creative.shortcuts.forEach(function(i) { if (i.show === undefined) i.show = true; if (i.icon === undefined) i.icon = ''; if (i.agentid === undefined) i.agentid = ''; });
                     if (config.creative.assist) config.creative.assist.forEach(function(i) { if (i.enable === undefined) i.enable = true; });
                     if (config.creative.recipeTypes) config.creative.recipeTypes.forEach(function(i) { if (i.enable === undefined) i.enable = true; });
                     if (config.creative.recipes) config.creative.recipes.forEach(function(i) { if (i.enable === undefined) i.enable = true; });
@@ -460,29 +456,6 @@
                     document.getElementById(areaId).classList.add('has-image');
                 };
                 reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function saveAllConfig() {
-            config.coldStart.intro.text = document.getElementById('intro-text').value;
-            var avatarPreview = document.getElementById('avatar-preview');
-            if (avatarPreview.src && avatarPreview.src !== 'about:blank' && avatarPreview.style.display !== 'none') {
-                config.coldStart.intro.avatar = avatarPreview.src;
-            }
-            config.newUser.wallpaper.title = document.getElementById('wallpaper-title').value;
-            config.newUser.wallpaper.androidText = document.getElementById('wallpaper-android').value;
-            config.newUser.wallpaper.iosText = document.getElementById('wallpaper-ios').value;
-            config.newUser.wallpaper.successText = document.getElementById('wallpaper-success').value;
-            localStorage.setItem('dcmsConfig', JSON.stringify(config));
-            showToast();
-        }
-
-        function resetConfig() {
-            if (confirm('确定要重置所有配置吗？')) {
-                config = JSON.parse(JSON.stringify(defaultConfig));
-                localStorage.removeItem('dcmsConfig');
-                init();
-                showToast('配置已重置');
             }
         }
 
@@ -780,7 +753,10 @@
                 html += '<tr draggable="true" ondragstart="dragStart(event, ' + item.id + ', \'shortcut\')" ondragend="this.classList.remove(\'dragging\');" ondragover="dragOver(event)" ondrop="drop(event, ' + item.id + ', \'shortcut\')">';
                 html += '<td>☰</td>';
                 html += '<td><input type="number" class="sort-input" value="' + item.sort + '" onchange="updateSort(\'shortcut\', ' + item.id + ', this.value)"></td>';
-                html += '<td>' + item.name + '</td><td>' + item.defaultText + '</td>';
+                html += '<td>' + item.name + '</td>';
+                html += '<td>' + (item.icon ? '<img src="' + item.icon + '" class="responsive-img">' : '-') + '</td>';
+                html += '<td>' + (item.agentid || '-') + '</td>';
+                html += '<td>' + item.defaultText + '</td>';
                 html += '<td>' + (item.actionType === 'input' ? '拉起输入框' : '跳转页面') + '</td>';
                 html += '<td>' + item.platforms.join(', ') + '</td>';
                 html += '<td>' + (item.show ? '<span class="status-yes">是</span>' : '<span class="status-no">否</span>') + '</td>';
@@ -805,9 +781,14 @@
             var miniChecked = item && item.platforms.includes('小程序') ? 'checked' : '';
             var h5Checked = item && item.platforms.includes('H5') ? 'checked' : '';
             var showChecked = item ? (item.show ? 'checked' : '') : 'checked';
+            var iconDisplay = item && item.icon ? 'display:block;' : 'display:none;';
             document.getElementById('modal-body').innerHTML =
                 '<div class="form-group"><label>快捷入口名称</label><input type="text" id="sc-name" required value="' + (item ? item.name : '') + '"></div>' +
                 '<div class="form-group"><label>快捷入口排序</label><input type="number" id="sc-sort" value="' + (item ? item.sort : config.creative.shortcuts.length + 1) + '" min="1"></div>' +
+                '<div class="form-group"><label>图标配置</label><div class="upload-area" onclick="triggerUpload(\'sc-icon-upload\')" id="sc-icon-area">' +
+                '<img id="sc-icon-preview" src="' + (item ? item.icon : '') + '" style="' + iconDisplay + '"><div class="upload-text">点击上传图标</div></div>' +
+                '<input type="file" id="sc-icon-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(this, \'sc-icon-preview\', \'sc-icon-area\')"></div>' +
+                '<div class="form-group"><label>agentid</label><input type="text" id="sc-agentid" value="' + (item ? item.agentid : '') + '"></div>' +
                 '<div class="form-group"><label>点击行为类型</label><select id="sc-action" onchange="changeShortcutAction()">' +
                 '<option value="input"' + (item && item.actionType === 'input' ? ' selected' : '') + '>拉起输入框</option>' +
                 '<option value="page"' + (item && item.actionType === 'page' ? ' selected' : '') + '>跳转页面</option></select></div>' +
@@ -1154,6 +1135,8 @@
             } else if (modalType === 'shortcut') {
                 var scName = document.getElementById('sc-name').value.trim();
                 var scSort = parseInt(document.getElementById('sc-sort').value);
+                var scIcon = document.getElementById('sc-icon-preview').src;
+                var scAgentid = document.getElementById('sc-agentid').value;
                 var scDefault = document.getElementById('sc-default').value;
                 var scAction = document.getElementById('sc-action').value;
                 var scLink = document.getElementById('sc-link').value;
@@ -1162,13 +1145,14 @@
                 if (document.getElementById('sc-app').checked) scPlatforms.push('APP');
                 if (document.getElementById('sc-mini').checked) scPlatforms.push('小程序');
                 if (document.getElementById('sc-h5').checked) scPlatforms.push('H5');
+                var scIconUrl = scIcon && scIcon !== 'about:blank' && document.getElementById('sc-icon-preview').style.display !== 'none' ? scIcon : '';
                 if (!scName) { showErrorToast('请填写入口名称'); return; }
                 if (scAction === 'page' && !scLink) { showErrorToast('跳转页面需填写跳转链接'); return; }
                 if (editingId) {
                     var si = config.creative.shortcuts.find(function(i) { return i.id === editingId; });
-                    si.name = scName; si.sort = scSort; si.defaultText = scDefault; si.actionType = scAction; si.link = scLink; si.platforms = scPlatforms; si.show = scShow;
+                    si.name = scName; si.sort = scSort; si.icon = scIconUrl; si.agentid = scAgentid; si.defaultText = scDefault; si.actionType = scAction; si.link = scLink; si.platforms = scPlatforms; si.show = scShow;
                 } else {
-                    config.creative.shortcuts.push({ id: Date.now(), name: scName, sort: scSort, defaultText: scDefault, actionType: scAction, link: scLink, platforms: scPlatforms, show: scShow });
+                    config.creative.shortcuts.push({ id: Date.now(), name: scName, sort: scSort, icon: scIconUrl, agentid: scAgentid, defaultText: scDefault, actionType: scAction, link: scLink, platforms: scPlatforms, show: scShow });
                 }
                 renderShortcutList();
                 success = true;
